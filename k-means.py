@@ -39,7 +39,7 @@ def shortest_distance(point, means):
     return shortest_distance
 
 if __name__ == "__main__":
-    pointstxt = sc.textFile("/home/bruk/projects/cloud/k-means/generate_point/points.txt")
+    pointstxt = sc.textFile("./points.txt")
     points = pointstxt.map(lambda x: x.split(",")).map(lambda x: cast_list(x)).persist()
     starting_means = points.takeSample(num=mean_number, withReplacement=False)
 
