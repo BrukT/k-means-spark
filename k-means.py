@@ -1,6 +1,8 @@
 from pyspark import SparkContext, Broadcast
 
 import sys
+import os
+import shutil
 import matplotlib.pyplot as plt
 import math
 import numpy as np
@@ -54,7 +56,7 @@ def clustering_plot(points, means):
             plt.scatter(pt[0], pt[1], color='green')
         elif closest_mean(pt, means, len(means)) == 3:
             plt.scatter(pt[0],pt[1], color='yellow')
-
+    plot_list(means, col='black')
     plt.show()
 
 
@@ -69,8 +71,11 @@ def main():
         print("usage: python </path/to/inputfile.txt> <number_of_means> \n or no arguments")
         exit(0)
 
+    if os.path.exists("./output/"):
+        shutil.rmtree("./output/")
+
     err_distance = float('inf')
-    stop_err_level = 0.0000001
+    stop_err_level = 0.00000001
     iteration_max = 20
 
     pointstxt = sc.textFile(input_f)
@@ -118,6 +123,7 @@ def main():
 
     '''plotting the scatter plot of the cluster'''
     clustering_plot(points.collect(), interm_means.value)
+    sc.parallelize(interm_means.value).saveAsTextFile("./output/")
     sc.cancelAllJobs()
     sc.stop()
 
