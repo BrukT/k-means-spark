@@ -1,73 +1,126 @@
-from pyspark import SparkContext
-sc = SparkContext(appName = "k-means", master='local[1]')
+from pyspark import SparkContext, Broadcast
 
+import sys
 import matplotlib.pyplot as plt
 import math
 import numpy as np
-mean_number = 4
-err_distance = np.inf
 
+sc = SparkContext('local', 'k-means-app')
+sc.setLogLevel('WARN')
 
-def cast_list(x):
-    return np.array(x, dtype=float)
 
 def closest_mean(point, means, repetition):
     j = 0
-    shortest_distance = np.linalg.norm(np.subtract(means[j], point))
+    shortest_dist: float = np.linalg.norm(np.subtract(means[j], point))
     nearest_index = j
     j = j + 1
     while j < repetition:
-        distance = np.linalg.norm(np.subtract(means[j], point))
-        if(shortest_distance > distance):
+        distance = np.linalg.norm(np.subtract(means[j], np.array(point)))
+        if shortest_dist > distance:
             nearest_index = j
+            shortest_dist = distance
         j = j + 1
     return nearest_index
 
 
-
-def shortest_distance(point, means):
+def shortest_distance(point, means, repetition):
     j = 0
-    for mean in means:
-        if j == 0:
-            shortest_distance = np.linalg.norm(np.subtract(mean, point))
-            j = j + 1
-        else:
-            distance = np.linalg.norm(np.subtract(mean, point))
-            if (shortest_distance > distance):
-                short_distance = distance
-            j = j + 1
-    return shortest_distance
+    shortest_dist = np.linalg.norm(np.subtract(means[j], point))
+    j = j + 1
+    while j < repetition:
+        distance = np.linalg.norm(np.subtract(means[j], point))
+        if shortest_dist > distance:
+            shortest_dist = distance
+        j += 1
+    return shortest_dist
 
-if __name__ == "__main__":
-    pointstxt = sc.textFile("./points.txt")
-    points = pointstxt.map(lambda x: x.split(",")).map(lambda x: cast_list(x)).persist()
+
+def plot_list(points, col='blue'):
+    # plotting list of points
+    x, y = [], []
+    for pt in points:
+        x.append(pt[0])
+        y.append(pt[1])
+    plt.scatter(x, y, color=col)
+
+
+def clustering_plot(points, means):
+    for pt in points:
+        if closest_mean(pt, means, len(means)) == 0:
+            plt.scatter(pt[0], pt[1], color='red')
+        elif closest_mean(pt, means, len(means)) == 1:
+            plt.scatter(pt[0], pt[1], color='blue')
+        elif closest_mean(pt, means, len(means)) == 2:
+            plt.scatter(pt[0], pt[1], color='green')
+        elif closest_mean(pt, means, len(means)) == 3:
+            plt.scatter(pt[0],pt[1], color='yellow')
+
+    plt.show()
+
+
+def main():
+    if len(sys.argv) == 1:
+        input_f = "./points.txt"
+        mean_number = 4
+    elif len(sys.argv) == 3:
+        input_f = sys.argv[1]
+        mean_number = sys.argv[2]
+    else:
+        print("usage: python </path/to/inputfile.txt> <number_of_means> \n or no arguments")
+        exit(0)
+
+    err_distance = float('inf')
+    stop_err_level = 0.0000001
+    iteration_max = 20
+
+    pointstxt = sc.textFile(input_f)
+    points = pointstxt.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
     starting_means = points.takeSample(num=mean_number, withReplacement=False)
+    print("starting means size ", len(starting_means))
 
-    i = 0
+    iteration = 0
+    errs = []
     interm_means = sc.broadcast(starting_means)
-    while True:
-        prev_errDist = err_distance
-        temp = points.keyBy(lambda x: closest_mean(x, interm_means.value, mean_number)).sortByKey()
-        #print("temp keys", temp.keys().distinct().collect())
-        x = temp.keys().distinct().count()
-        if( x < mean_number):
-            print("   error dumping      ")
-            print(temp.collect())
-            exit(0)
-        temp2 = temp.reduceByKey(lambda x, y: np.average(np.array([x, y]), axis=0)).cache()
-        print("temp2 size ", temp2.count())
-        new_means = temp2.values().collect()
+    mean_count = sc.broadcast(mean_number)
+    print("starting means ", interm_means.value)
 
-        err_distance = points.map(lambda x: shortest_distance(x, interm_means.value)).reduce(lambda x, y: x + y)
+    # plot points and initial means with black
+    plot_list(points.collect())
+    plot_list(starting_means, col='black')
 
-        print(" means num ", len(interm_means.value), " iteration ", i)
-        i = i + 1
-        if i > 0:
+    while iteration < iteration_max:
+        prev_errdist = err_distance
+        new_means = points.map(lambda x: (closest_mean(x, interm_means.value, mean_count.value), x))\
+            .reduceByKey(lambda x, y: np.average(np.array([x, y]), axis=0)).values().collect()
+
+        iteration += 1
+        if iteration > 0:
             interm_means = sc.broadcast(new_means)
-        if (i > 1 and math.fabs(prev_errDist - err_distance) < 0.001 * prev_errDist):
-            #plt.plot(new_means, color='red')
+
+        err_distance = points.map(lambda x: shortest_distance(x, interm_means.value, mean_count.value)).sum()
+        errs.append(err_distance)
+
+        print(" means num ", len(interm_means.value), " iteration ", iteration, " error ", err_distance)
+
+        if (iteration > 1) and (math.fabs(prev_errdist - err_distance) < stop_err_level):
             break
 
-print("Final Means")
-for i in interm_means.value:
-    print(i)
+    print("Final Means")
+    for mean in interm_means.value:
+        print(mean)
+
+    plot_list(interm_means.value, col='red')
+    plt.show()
+
+    '''plotting the line graph of errors'''
+    plt.plot(errs)
+    plt.show()
+
+    '''plotting the scatter plot of the cluster'''
+    clustering_plot(points.collect(), interm_means.value)
+    sc.cancelAllJobs()
+    sc.stop()
+
+
+if __name__ == '__main__':
+    main()
