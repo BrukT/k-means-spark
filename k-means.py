@@ -37,13 +37,13 @@ def shortest_distance(point, means, repetition):
     return shortest_dist
 
 
-def plot_list(points, col='blue'):
+def plot_list(points, col='blue', mark='o', sz=20):
     # plotting list of points
     x, y = [], []
     for pt in points:
         x.append(pt[0])
         y.append(pt[1])
-    plt.scatter(x, y, color=col)
+    plt.scatter(x, y, color=col, marker=mark, s=sz)
 
 
 def clustering_plot(points, means):
@@ -56,7 +56,7 @@ def clustering_plot(points, means):
             plt.scatter(pt[0], pt[1], color='green')
         elif closest_mean(pt, means, len(means)) == 3:
             plt.scatter(pt[0],pt[1], color='yellow')
-    plot_list(means, col='black')
+    plot_list(means, col='black', mark='*', sz=400)
     plt.show()
 
 
@@ -66,7 +66,7 @@ def main():
         mean_number = 4
     elif len(sys.argv) == 3:
         input_f = sys.argv[1]
-        mean_number = sys.argv[2]
+        mean_number = int(sys.argv[2])
     else:
         print("usage: python </path/to/inputfile.txt> <number_of_means> \n or no arguments")
         exit(0)
@@ -75,8 +75,8 @@ def main():
         shutil.rmtree("./output/")
 
     err_distance = float('inf')
-    stop_err_level = 0.00000001
-    iteration_max = 20
+    stop_err_level = 0.01
+    iteration_max = 40
 
     pointstxt = sc.textFile(input_f)
     points = pointstxt.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
@@ -91,7 +91,7 @@ def main():
 
     # plot points and initial means with black
     plot_list(points.collect())
-    plot_list(starting_means, col='black')
+    plot_list(starting_means, col='black', sz=80)
 
     while iteration < iteration_max:
         prev_errdist = err_distance
@@ -107,14 +107,15 @@ def main():
 
         print(" means num ", len(interm_means.value), " iteration ", iteration, " error ", err_distance)
 
-        if (iteration > 1) and (math.fabs(prev_errdist - err_distance) < stop_err_level):
+        if (iteration > 5) and (math.fabs(prev_errdist - err_distance) < (stop_err_level * prev_errdist)):
             break
 
     print("Final Means")
     for mean in interm_means.value:
         print(mean)
 
-    plot_list(interm_means.value, col='red')
+    '''plotting the final means'''
+    plot_list(interm_means.value, col='red', sz=80)
     plt.show()
 
     '''plotting the line graph of errors'''
