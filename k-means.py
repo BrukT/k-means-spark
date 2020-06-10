@@ -52,7 +52,7 @@ def main():
         shutil.rmtree("./output/")
 
     err_distance = float('inf')
-    stop_err_level = 0.01
+    stop_err_level = 0.0000001
     iteration_max = 40
 
     pointstxt = sc.textFile(input_f)
@@ -85,7 +85,7 @@ def main():
 
         print(" means num ", len(interm_means.value), " iteration ", iteration, " error ", err_distance)
 
-        if (iteration > 5) and (math.fabs(prev_errdist - err_distance) < (stop_err_level * prev_errdist)):
+        if (iteration > 10) and (math.fabs(prev_errdist - err_distance) < (stop_err_level * prev_errdist)):
             break
 
     print("Final Means")
