@@ -54,6 +54,7 @@ def main():
     err_distance = float('inf')
     stop_err_level = 0.0000001
     iteration_max = 40
+    iteration_min = 20
 
     pointstxt = sc.textFile(input_f)
     points = pointstxt.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
@@ -85,7 +86,7 @@ def main():
 
         print(" means num ", len(interm_means.value), " iteration ", iteration, " error ", err_distance)
 
-        if (iteration > 10) and (math.fabs(prev_errdist - err_distance) < (stop_err_level * prev_errdist)):
+        if (iteration > iteration_min) and (math.fabs(prev_errdist - err_distance) < (stop_err_level * prev_errdist)):
             break
 
     print("Final Means")
