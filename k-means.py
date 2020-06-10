@@ -1,11 +1,11 @@
-from pyspark import SparkContext, Broadcast
-
-import sys
+import math
 import os
 import shutil
-import matplotlib.pyplot as plt
-import math
+import sys
+
 import numpy as np
+from pyspark import SparkContext
+from resources.PlotUtil import PLotUtil
 
 sc = SparkContext('local', 'k-means-app')
 sc.setLogLevel('WARN')
@@ -37,29 +37,6 @@ def shortest_distance(point, means, repetition):
     return shortest_dist
 
 
-def plot_list(points, col='blue', mark='o', sz=20):
-    # plotting list of points
-    x, y = [], []
-    for pt in points:
-        x.append(pt[0])
-        y.append(pt[1])
-    plt.scatter(x, y, color=col, marker=mark, s=sz)
-
-
-def clustering_plot(points, means):
-    for pt in points:
-        if closest_mean(pt, means, len(means)) == 0:
-            plt.scatter(pt[0], pt[1], color='red')
-        elif closest_mean(pt, means, len(means)) == 1:
-            plt.scatter(pt[0], pt[1], color='blue')
-        elif closest_mean(pt, means, len(means)) == 2:
-            plt.scatter(pt[0], pt[1], color='green')
-        elif closest_mean(pt, means, len(means)) == 3:
-            plt.scatter(pt[0],pt[1], color='yellow')
-    plot_list(means, col='black', mark='*', sz=400)
-    plt.show()
-
-
 def main():
     if len(sys.argv) == 1:
         input_f = "./points.txt"
@@ -89,9 +66,10 @@ def main():
     mean_count = sc.broadcast(mean_number)
     print("starting means ", interm_means.value)
 
-    # plot points and initial means with black
-    plot_list(points.collect())
-    plot_list(starting_means, col='black', sz=80)
+    if len(starting_means[0]) == 2:
+        # plot points and initial means with black if the dimension is 2
+        PLotUtil.plot_list(points.collect())
+        PLotUtil.plot_list(starting_means, col='black', sz=80)
 
     while iteration < iteration_max:
         prev_errdist = err_distance
@@ -114,16 +92,18 @@ def main():
     for mean in interm_means.value:
         print(mean)
 
-    '''plotting the final means'''
-    plot_list(interm_means.value, col='red', sz=80)
-    plt.show()
+    '''plotting the final means if the dimension is 2'''
+    if len(starting_means[0]) == 2:
+        PLotUtil.plot_list(interm_means.value, col='red', sz=80)
+        PLotUtil.show()
 
-    '''plotting the line graph of errors'''
-    plt.plot(errs)
-    plt.show()
+        '''plotting the line graph of errors'''
+        PLotUtil.plot(errs)
 
-    '''plotting the scatter plot of the cluster'''
-    clustering_plot(points.collect(), interm_means.value)
+        '''plotting the scatter plot of the cluster'''
+        PLotUtil.clustering_plot(points.collect(), interm_means.value, closest_mean)
+
+    '''Saving the output clusters'''
     sc.parallelize(interm_means.value).saveAsTextFile("./output/")
     sc.cancelAllJobs()
     sc.stop()
