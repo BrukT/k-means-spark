@@ -18,23 +18,37 @@ class Circle:
 
 
 if __name__ == '__main__':
-    num_samples = 200
-    center_x, center_y = 20, 80
+    num_samples = 300
+    center_x, center_y = 50, 150
     origin = Point(0, 0)
     radius = 20
     circle = Circle(origin, radius)
     values = np.empty(shape=(num_samples, 2), dtype=float)
-    for i in range(0, int(num_samples/2)):
+    for i in range(0, int(num_samples/3)):
         p = random.random() * 2 * math.pi
         r = circle.radius * math.sqrt(random.random())
         x, y = math.cos(p) * r + center_x, math.sin(p) * r + center_y
         values[i] = np.array([x, y])
 
-    origin = Point(0, 0)
-    circle = Circle(origin, radius)
-    center_x, center_y = 80, 20
+    center_x, center_y = 100, 100
 
-    for j in range(int(num_samples/2), num_samples):
+    for j in range(int(num_samples/3), 2 * int(num_samples/3)):
+        p = random.random() * 2 * math.pi
+        r = circle.radius * math.sqrt(random.random())
+        x, y = math.cos(p) * r + center_x, math.sin(p) * r + center_y
+        values[j] = np.array([x, y])
+    '''
+    center_x, center_y = 50, 50
+
+    for j in range(2 * int(num_samples / 4), 3 * int(num_samples / 4)):
+        p = random.random() * 2 * math.pi
+        r = circle.radius * math.sqrt(random.random())
+        x, y = math.cos(p) * r + center_x, math.sin(p) * r + center_y
+        values[j] = np.array([x, y])
+'''
+    center_x, center_y = 150, 150
+
+    for j in range(2 * int(num_samples / 3), num_samples):
         p = random.random() * 2 * math.pi
         r = circle.radius * math.sqrt(random.random())
         x, y = math.cos(p) * r + center_x, math.sin(p) * r + center_y

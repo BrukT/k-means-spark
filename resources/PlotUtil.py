@@ -21,13 +21,13 @@ class PLotUtil:
     @staticmethod
     def clustering_plot(points, means, closest_mean):
         for pt in points:
-            if closest_mean(pt, means, len(means)) == 0:
+            if closest_mean(pt, means) == 0:
                 plt.scatter(pt[0], pt[1], color='red')
-            elif closest_mean(pt, means, len(means)) == 1:
+            elif closest_mean(pt, means) == 1:
                 plt.scatter(pt[0], pt[1], color='blue')
-            elif closest_mean(pt, means, len(means)) == 2:
+            elif closest_mean(pt, means) == 2:
                 plt.scatter(pt[0], pt[1], color='green')
-            elif closest_mean(pt, means, len(means)) == 3:
+            elif closest_mean(pt, means) == 3:
                 plt.scatter(pt[0], pt[1], color='yellow')
         PLotUtil.plot_list(means, col='black', mark='*', sz=400)
         plt.show()
