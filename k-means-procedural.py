@@ -1,9 +1,16 @@
+"""
+This implementation is done to be used as a benchmark to check
+if the results obtained via map reduce are reasonable.
+Spark context is used here to load the data and take samples only
+the rest of the implementation is pure python3.6 and numpy library
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import style
-style.use("ggplot")
-from sklearn.cluster import KMeans
 from pyspark import SparkContext
+
+style.use("ggplot")
 
 sc = SparkContext('local', 'k-means-app')
 sc.setLogLevel('WARN')
@@ -25,13 +32,8 @@ for pt in starting_means:
     x.append(pt[0])
     y.append(pt[1])
 plt.scatter(x, y, c='blue', s=100)
-'''
-kmeans = KMeans(n_clusters=3)
-kmeans.fit(X)
-y_kmeans = kmeans.predict(X)
-print(X)
-'''
-pts = [[],[],[]]
+
+pts = [[], [], []]
 error = 0
 prev_error = float('inf')
 stepCnt = 0
@@ -61,20 +63,20 @@ while prev_error > error:
         for j in range(0, len(pts[i])):
             tot = np.add(tot, np.array(pts[i][j]))
             error += np.linalg.norm(np.subtract(starting_means[i], pts[i][j]))
-        starting_means[i] = tot/len(pts[i])
+        starting_means[i] = tot / len(pts[i])
 
     print("error value on step ", stepCnt, " is ", error)
+
 x, y = [], []
 for pt in X:
     x.append(pt[0])
     y.append(pt[1])
-#plt.scatter(x, y, color=col, marker=mark, s=sz)
-plt.scatter(x, y, s=50, cmap='viridis')
+
+plt.scatter(x, y, s=50)
+
 x, y = [], []
 for pt in starting_means:
     x.append(pt[0])
     y.append(pt[1])
 plt.scatter(x, y, c='black', s=200, alpha=0.5)
-#centers = kmeans.cluster_centers_
-#plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5)
 plt.show()
