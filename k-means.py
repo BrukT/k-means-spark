@@ -30,11 +30,13 @@ def main():
     if len(sys.argv) == 1:
         inpute_file = "./points.txt"
         mean_number = 4
-    elif len(sys.argv) == 3:
+        dimension = 2
+    elif len(sys.argv) == 4:
         inpute_file = sys.argv[1]
         mean_number = int(sys.argv[2])
+        dimension = int(sys.argv[3])
     else:
-        print("usage: python </path/to/inputfile.txt> <number_of_means> \n or no arguments")
+        print("usage: python </path/to/inputfile.txt> <number_of_means> <dimension_of_points>\n or no arguments")
         exit(0)
 
     if os.path.exists("./output/"):
@@ -44,7 +46,6 @@ def main():
     stop_err_level = 0.0000001
     iteration_max = 20
     iteration_min = 5
-    dimension = 2
 
     pointstxt = sc.textFile(inpute_file)
     points = pointstxt.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
