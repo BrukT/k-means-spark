@@ -66,9 +66,9 @@ def main():
 
     while iteration < iteration_max:
         prev_errdist = err_distance
-        aTuple = (np.zeros(shape=(dimension,), dtype=float), 0)
+        accumulator = (np.zeros(shape=(dimension,), dtype=float), 0)
         new_means = points.map(lambda x: (closest_mean(x, intermediate_means.value), x))\
-            .aggregateByKey(aTuple, lambda a, b: (a[0] + b, a[1] + 1), lambda a, b: (a[0] + b[0], a[1] + b[1])) \
+            .aggregateByKey(accumulator, lambda a, b: (a[0] + b, a[1] + 1), lambda a, b: (a[0] + b[0], a[1] + b[1])) \
             .mapValues(lambda v: v[0] / v[1]).values().collect()
 
         err_distance = points.map(lambda x: shortest_distance(x, intermediate_means.value)).sum()
@@ -101,7 +101,7 @@ def main():
             '''plotting the scatter plot of the cluster'''
             PLotUtil.clustering_plot(points.collect(), intermediate_means.value, closest_mean)
 
-    '''Saving the output clusters'''
+    '''Saving the output cluster centroids'''
     sc.parallelize(intermediate_means.value).saveAsTextFile("./output/")
     sc.cancelAllJobs()
     sc.stop()
