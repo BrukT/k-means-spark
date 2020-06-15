@@ -48,7 +48,7 @@ def main():
 
     pointstxt = sc.textFile(inpute_file)
     points = pointstxt.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
-    starting_means = points.takeSample(num=mean_number, withReplacement=False, seed=6)
+    starting_means = points.takeSample(num=mean_number, withReplacement=False)
     if sc.master == 'local':
         print("starting means size ", len(starting_means))
 
