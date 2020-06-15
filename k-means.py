@@ -101,7 +101,7 @@ def main():
             '''plotting the scatter plot of the cluster'''
             PLotUtil.clustering_plot(points.collect(), intermediate_means.value, closest_mean)
 
-    '''Saving the output clusters'''
+    '''Saving the output cluster centroids'''
     sc.parallelize(intermediate_means.value).saveAsTextFile("./output/")
     sc.cancelAllJobs()
     sc.stop()
