@@ -29,11 +29,11 @@ def shortest_distance(point, means):
 def main():
     if len(sys.argv) == 1:
         inpute_file = "./points.txt"
-        mean_number = 4
+        cluster_number = 4
         dimension = 2
     elif len(sys.argv) == 4:
         inpute_file = sys.argv[1]
-        mean_number = int(sys.argv[2])
+        cluster_number = int(sys.argv[2])
         dimension = int(sys.argv[3])
     else:
         print("usage: python </path/to/inputfile.txt> <number_of_means> <dimension_of_points>\n or no arguments")
@@ -42,19 +42,19 @@ def main():
     if os.path.exists("./output/"):
         shutil.rmtree("./output/")
 
-    err_distance = float('inf')
+    error_distance = float('inf')
     stop_err_level = 0.0000001
     iteration_max = 20
     iteration_min = 5
 
     pointstxt = sc.textFile(inpute_file)
     points = pointstxt.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
-    starting_means = points.takeSample(num=mean_number, withReplacement=False)
+    starting_means = points.takeSample(num=cluster_number, withReplacement=False)
     if sc.master == 'local':
         print("starting means size ", len(starting_means))
 
     iteration = 0
-    errs = []
+    errors = []
     intermediate_means = sc.broadcast(starting_means)
     print("starting means ", intermediate_means.value)
 
@@ -65,24 +65,24 @@ def main():
         PLotUtil.plot_list(starting_means, col='black', sz=80)
 
     while iteration < iteration_max:
-        prev_errdist = err_distance
+        previous_error_distance = error_distance
         accumulator = (np.zeros(shape=(dimension,), dtype=float), 0)
         new_means = points.map(lambda x: (closest_mean(x, intermediate_means.value), x))\
             .aggregateByKey(accumulator, lambda a, b: (a[0] + b, a[1] + 1), lambda a, b: (a[0] + b[0], a[1] + b[1])) \
             .mapValues(lambda v: v[0] / v[1]).values().collect()
 
-        err_distance = points.map(lambda x: shortest_distance(x, intermediate_means.value)).sum()
+        error_distance = points.map(lambda x: shortest_distance(x, intermediate_means.value)).sum()
 
         intermediate_means = sc.broadcast(new_means)
         iteration += 1
 
         # display debugging information if it is in local node
         if sc.master == 'local':
-            print("Means ", intermediate_means.value, " iteration ", iteration, " error ", err_distance)
+            print("Means ", intermediate_means.value, " iteration ", iteration, " error ", error_distance)
             # collect the errors in a list to plot the error trend at the end
-            errs.append(err_distance)
+            errors.append(error_distance)
 
-        if (iteration > iteration_min) and (math.fabs(prev_errdist - err_distance) < (stop_err_level * prev_errdist)):
+        if (iteration > iteration_min) and (math.fabs(previous_error_distance - error_distance) < (stop_err_level * previous_error_distance)):
             break
 
     print("Final Means")
@@ -96,7 +96,7 @@ def main():
             PLotUtil.show()
 
             '''plotting the line graph of errors'''
-            PLotUtil.plot(errs)
+            PLotUtil.plot(errors)
 
             '''plotting the scatter plot of the cluster'''
             PLotUtil.clustering_plot(points.collect(), intermediate_means.value, closest_mean)
