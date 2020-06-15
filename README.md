@@ -3,4 +3,4 @@ course summary project
 
 the working python script is the ```k-means.py``` one
 
-unfortunately the dependencies are installed on the machine directly 
+unfortunately the dependencies are installed on the machine directly.
