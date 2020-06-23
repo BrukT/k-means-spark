@@ -67,11 +67,12 @@ def main():
     while iteration < iteration_max:
         previous_error_distance = error_distance
         accumulator = (np.zeros(shape=(dimension,), dtype=float), 0)
-        new_means = points.map(lambda x: (closest_mean(x, intermediate_means.value), x))\
+        new_means = points.map(lambda x: (closest_mean(x, intermediate_means.value), x)) \
             .aggregateByKey(accumulator, lambda a, b: (a[0] + b, a[1] + 1), lambda a, b: (a[0] + b[0], a[1] + b[1])) \
             .mapValues(lambda v: v[0] / v[1]).values().collect()
 
-        error_distance = points.map(lambda x: shortest_distance(x, intermediate_means.value)).sum()
+        # error_distance = points.map(lambda x: shortest_distance(x, intermediate_means.value)).sum()
+        error_distance = points.aggregate(0.0, lambda a, x: shortest_distance(x, intermediate_means.value) + a, lambda a, b: (a + b))
 
         intermediate_means = sc.broadcast(new_means)
         iteration += 1
@@ -82,13 +83,14 @@ def main():
             # collect the errors in a list to plot the error trend at the end
             errors.append(error_distance)
 
-        if (iteration > iteration_min) and (math.fabs(previous_error_distance - error_distance) < (stop_err_level * previous_error_distance)):
+        if (iteration > iteration_min) and (
+                math.fabs(previous_error_distance - error_distance) < (stop_err_level * previous_error_distance)):
             break
 
     print("Final Means")
     for mean in intermediate_means.value:
         print(mean)
-        
+
     if dimension == 2 and sc.master == 'local':
         '''plotting the final means if the dimension is 2'''
         if len(starting_means[0]) == 2:
