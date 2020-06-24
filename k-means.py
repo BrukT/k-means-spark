@@ -9,7 +9,7 @@ import shutil
 import sys
 
 import numpy as np
-from pyspark import SparkContext
+from pyspark import SparkContext, Accumulator
 from resources.PlotUtil import PLotUtil
 import configparser as cp
 
@@ -44,7 +44,7 @@ def main():
     error_distance = float('inf')
 
     points_in_text = sc.textFile(input_file)
-    points = points_in_text.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
+    points = points_in_text.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float)).persist()
     starting_means = points.takeSample(num=cluster_number, withReplacement=False)
     if sc.master == 'local':
         print("starting means size ", len(starting_means))
@@ -61,15 +61,22 @@ def main():
         PLotUtil.plot_list(starting_means, col='black', sz=80)
 
     while iteration < iteration_max:
+        error_accumulator = sc.accumulator(0)
         previous_error_distance = error_distance
         accumulator = (np.zeros(shape=(dimension,), dtype=float), 0)
         new_means = points.map(lambda x: (closest_mean(x, intermediate_means.value), x)) \
             .aggregateByKey(accumulator, lambda a, b: (a[0] + b, a[1] + 1), lambda a, b: (a[0] + b[0], a[1] + b[1])) \
             .mapValues(lambda v: v[0] / v[1]).values().collect()
 
+        ''' 
+        ## commented because of a better version, found next to this block, works more efficiently.
+        # it basically uses an accumulator
         error_distance = points.aggregate(0.0, lambda a, x: shortest_distance(x, intermediate_means.value) + a, \
                                           lambda a, b: (a + b))
+        '''
 
+        points.map(lambda x: shortest_distance(x, intermediate_means.value)).foreach(lambda x: error_accumulator.add(x))
+        error_distance = error_accumulator.value
         intermediate_means = sc.broadcast(new_means)
         iteration += 1
 
