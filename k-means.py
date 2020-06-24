@@ -11,6 +11,7 @@ import sys
 import numpy as np
 from pyspark import SparkContext
 from resources.PlotUtil import PLotUtil
+import configparser as cp
 
 sc = SparkContext('local', 'k-means-app')
 sc.setLogLevel('WARN')
@@ -28,11 +29,14 @@ def shortest_distance(point, means):
 
 def main():
     if len(sys.argv) == 1:
-        inpute_file = "./points.txt"
+        #input_file = "./points.txt"
+        config = cp.ConfigParser()
+        config.read('config.ini')
+        input_file = config['inputPath']
         cluster_number = 4
         dimension = 2
     elif len(sys.argv) == 4:
-        inpute_file = sys.argv[1]
+        input_file = sys.argv[1]
         cluster_number = int(sys.argv[2])
         dimension = int(sys.argv[3])
     else:
@@ -47,7 +51,7 @@ def main():
     iteration_max = 20
     iteration_min = 5
 
-    pointstxt = sc.textFile(inpute_file)
+    pointstxt = sc.textFile(input_file)
     points = pointstxt.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
     starting_means = points.takeSample(num=cluster_number, withReplacement=False)
     if sc.master == 'local':
@@ -71,7 +75,7 @@ def main():
             .aggregateByKey(accumulator, lambda a, b: (a[0] + b, a[1] + 1), lambda a, b: (a[0] + b[0], a[1] + b[1])) \
             .mapValues(lambda v: v[0] / v[1]).values().collect()
 
-        # error_distance = points.map(lambda x: shortest_distance(x, intermediate_means.value)).sum()
+        #error_distance = points.map(lambda x: shortest_distance(x, intermediate_means.value)).sum()
         error_distance = points.aggregate(0.0, lambda a, x: shortest_distance(x, intermediate_means.value) + a, lambda a, b: (a + b))
 
         intermediate_means = sc.broadcast(new_means)
