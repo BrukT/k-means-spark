@@ -28,31 +28,23 @@ def shortest_distance(point, means):
 
 
 def main():
-    if len(sys.argv) == 1:
-        #input_file = "./points.txt"
-        config = cp.ConfigParser()
-        config.read('config.ini')
-        input_file = config['inputPath']
-        cluster_number = 4
-        dimension = 2
-    elif len(sys.argv) == 4:
-        input_file = sys.argv[1]
-        cluster_number = int(sys.argv[2])
-        dimension = int(sys.argv[3])
-    else:
-        print("usage: python </path/to/inputfile.txt> <number_of_means> <dimension_of_points>\n or no arguments")
-        exit(0)
-
-    if os.path.exists("./output/"):
-        shutil.rmtree("./output/")
+    config = cp.ConfigParser()
+    config.read('config.ini')
+    input_file = config.get('Dataset', 'inputPath')
+    output_location = config.get('Dataset', 'outputPath')
+    cluster_number = config.getint('Dataset', 'numberOfClusters')
+    dimension = config.getint('Dataset', 'dimension')
+    stop_err_level = config.getfloat('K-means', 'errorThreshold')
+    iteration_max = config.getint('K-means', 'maximumNumberOfIterations')
+    iteration_min = config.getint('K-means', 'minimumNumberOfIterations')
+    
+    if os.path.exists("./"+output_location+"/"):
+        shutil.rmtree("./"+output_location+"/")
 
     error_distance = float('inf')
-    stop_err_level = 0.0000001
-    iteration_max = 20
-    iteration_min = 5
 
-    pointstxt = sc.textFile(input_file)
-    points = pointstxt.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
+    points_in_text = sc.textFile(input_file)
+    points = points_in_text.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float))
     starting_means = points.takeSample(num=cluster_number, withReplacement=False)
     if sc.master == 'local':
         print("starting means size ", len(starting_means))
@@ -75,8 +67,8 @@ def main():
             .aggregateByKey(accumulator, lambda a, b: (a[0] + b, a[1] + 1), lambda a, b: (a[0] + b[0], a[1] + b[1])) \
             .mapValues(lambda v: v[0] / v[1]).values().collect()
 
-        #error_distance = points.map(lambda x: shortest_distance(x, intermediate_means.value)).sum()
-        error_distance = points.aggregate(0.0, lambda a, x: shortest_distance(x, intermediate_means.value) + a, lambda a, b: (a + b))
+        error_distance = points.aggregate(0.0, lambda a, x: shortest_distance(x, intermediate_means.value) + a, \
+                                          lambda a, b: (a + b))
 
         intermediate_means = sc.broadcast(new_means)
         iteration += 1
@@ -108,7 +100,7 @@ def main():
             PLotUtil.clustering_plot(points.collect(), intermediate_means.value, closest_mean)
 
     '''Saving the output cluster centroids'''
-    sc.parallelize(intermediate_means.value).saveAsTextFile("./output/")
+    sc.parallelize(intermediate_means.value).saveAsTextFile("./"+output_location+"/")
     sc.cancelAllJobs()
     sc.stop()
 
