@@ -6,15 +6,26 @@ Also it plots the resulting clustered points graph
 import math
 import os
 import shutil
-import sys
 
 import numpy as np
 from pyspark import SparkContext, Accumulator
 from resources.PlotUtil import PLotUtil
 import configparser as cp
 
-sc = SparkContext('local', 'k-means-app')
-sc.setLogLevel('WARN')
+sc = SparkContext(appName='k-means-app')
+
+# global variable configurations for the program
+config = cp.ConfigParser()
+config.read('config.ini')
+sc.setLogLevel(config.get('Spark', 'logLevel'))
+input_file = config.get('Dataset', 'inputPath')
+output_location = config.get('Dataset', 'outputPath')
+cluster_number = config.getint('Dataset', 'numberOfClusters')
+dimension = config.getint('Dataset', 'dimension')
+stop_err_level = config.getfloat('K-means', 'errorThreshold')
+iteration_max = config.getint('K-means', 'maximumNumberOfIterations')
+iteration_min = config.getint('K-means', 'minimumNumberOfIterations')
+mode = config.get('Spark', 'mode')
 
 
 def closest_mean(point, means):
@@ -28,16 +39,6 @@ def shortest_distance(point, means):
 
 
 def main():
-    config = cp.ConfigParser()
-    config.read('config.ini')
-    input_file = config.get('Dataset', 'inputPath')
-    output_location = config.get('Dataset', 'outputPath')
-    cluster_number = config.getint('Dataset', 'numberOfClusters')
-    dimension = config.getint('Dataset', 'dimension')
-    stop_err_level = config.getfloat('K-means', 'errorThreshold')
-    iteration_max = config.getint('K-means', 'maximumNumberOfIterations')
-    iteration_min = config.getint('K-means', 'minimumNumberOfIterations')
-    
     if os.path.exists("./"+output_location+"/"):
         shutil.rmtree("./"+output_location+"/")
 
@@ -46,7 +47,7 @@ def main():
     points_in_text = sc.textFile(input_file)
     points = points_in_text.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float)).cache()
     starting_means = points.takeSample(num=cluster_number, withReplacement=False)
-    if sc.master == 'local':
+    if sc.master == 'DEBUG':
         print("starting means size ", len(starting_means))
 
     iteration = 0
@@ -54,7 +55,7 @@ def main():
     intermediate_means = sc.broadcast(starting_means)
     print("starting means ", intermediate_means.value)
 
-    if dimension == 2 and sc.master == 'local':
+    if dimension == 2 and mode == 'DEBUG':
         """ plot points and initial means with black if the dimension is 2
         for debugging purpose"""
         PLotUtil.plot_list(points.collect())
@@ -80,8 +81,8 @@ def main():
         intermediate_means = sc.broadcast(new_means)
         iteration += 1
 
-        # display debugging information if it is in local node
-        if sc.master == 'local':
+        # display debugging information if it is in debug mode
+        if mode == 'DEBUG':
             print("Means ", intermediate_means.value, " iteration ", iteration, " error ", error_distance)
             # collect the errors in a list to plot the error trend at the end
             errors.append(error_distance)
@@ -94,7 +95,7 @@ def main():
     for mean in intermediate_means.value:
         print(mean)
 
-    if dimension == 2 and sc.master == 'local':
+    if dimension == 2 and mode == 'DEBUG':
         '''plotting the final means if the dimension is 2'''
         if len(starting_means[0]) == 2:
             PLotUtil.plot_list(intermediate_means.value, col='red', sz=80)
