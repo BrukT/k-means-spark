@@ -44,7 +44,7 @@ def main():
     error_distance = float('inf')
 
     points_in_text = sc.textFile(input_file)
-    points = points_in_text.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float)).persist()
+    points = points_in_text.map(lambda x: x.split(",")).map(lambda x: np.array(x, dtype=float)).cache()
     starting_means = points.takeSample(num=cluster_number, withReplacement=False)
     if sc.master == 'local':
         print("starting means size ", len(starting_means))
