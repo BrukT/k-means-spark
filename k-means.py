@@ -29,12 +29,12 @@ mode = config.get('Spark', 'mode')
 
 
 def closest_mean(point, means):
-    distance = np.sum((np.asarray(means) - np.array(point)) ** 2, axis=1)
+    distance = np.sum((np.asarray(means) - np.asarray(point)) ** 2, axis=1)
     return np.argmin(distance)
 
 
 def shortest_distance(point, means):
-    distance = np.sum((np.asarray(means) - np.array(point)) ** 2, axis=1)
+    distance = np.sum((np.asarray(means) - np.asarray(point)) ** 2, axis=1)
     return np.amin(distance)
 
 
@@ -85,8 +85,8 @@ def main():
             # collect the errors in a list to plot the error trend at the end
             errors.append(error_distance)
 
-        if (iteration > iteration_min) and (
-                math.fabs(previous_error_distance - error_distance) < (stop_err_level * previous_error_distance)):
+        if (iteration > iteration_min) and \
+                (math.fabs(previous_error_distance - error_distance) < (stop_err_level * previous_error_distance)):
             break
 
     if mode == 'DEBUG':
