@@ -8,7 +8,7 @@ import os
 import shutil
 
 import numpy as np
-from pyspark import SparkContext, Accumulator
+from pyspark import SparkContext
 from resources.PlotUtil import PLotUtil
 import configparser as cp
 
